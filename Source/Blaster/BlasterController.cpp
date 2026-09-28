@@ -12,6 +12,7 @@
 #include "Net/UnrealNetwork.h"
 #include "Blaster/GameModes/BlasterGameMode.h"
 #include "Blaster/HUD/Announcement.h"
+#include "Kismet/GameplayStatics.h"
 
 void ABlasterController::SetupInputComponent()
 {
@@ -46,10 +47,7 @@ void ABlasterController::BeginPlay()
 {
 	Super::BeginPlay();
 	BlasterHUD = Cast<ABlasterHUD>(GetHUD());
-	if (BlasterHUD)
-	{
-		BlasterHUD->AddAnnouncement();
-	}
+	Server_GetMatchState();
 }
 
 void ABlasterController::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
@@ -163,7 +161,6 @@ void ABlasterController::SetDefeats(int32 Defeats)
 
 void ABlasterController::SetHUDWeaponAmmo(int32 Ammo)
 {
-	UE_LOG(LogTemp, Warning, TEXT("SetHUDWeaponAMMo reached"));
 	BlasterHUD = BlasterHUD == nullptr ? Cast<ABlasterHUD>(GetHUD()) : BlasterHUD;
 
 	bool bHUDValid =
@@ -174,7 +171,6 @@ void ABlasterController::SetHUDWeaponAmmo(int32 Ammo)
 	{
 		FString AmmoAmountString = FString::Printf(TEXT("%d"), Ammo);
 		BlasterHUD->CharacterOverlay->WeaponAmmoAmount->SetText(FText::FromString(AmmoAmountString));
-		UE_LOG(LogTemp, Warning, TEXT("bHUDValid reached"));
 	}
 }
 
@@ -203,6 +199,7 @@ void ABlasterController::SetHUDMatchCountdown(float CountdownTime)
 		BlasterHUD->CharacterOverlay->MatchCountdownText;
 	if (bHUDValid)
 	{
+		UE_LOG(LogTemp, Warning, TEXT("MatchCountdownValid"));
 		int32 Minutes = FMath::FloorToInt(CountdownTime / 60.f);
 		int32 Seconds = CountdownTime - Minutes * 60;
 
@@ -211,14 +208,85 @@ void ABlasterController::SetHUDMatchCountdown(float CountdownTime)
 	}
 }
 
+void ABlasterController::SetHUDAnnouncementCountDown(float CountDown)
+{
+	BlasterHUD = BlasterHUD == nullptr ? Cast<ABlasterHUD>(GetHUD()) : BlasterHUD;
+
+	bool bHUDValid =
+		BlasterHUD &&
+		BlasterHUD->Announcement &&
+		BlasterHUD->Announcement->WarmupTime;
+	if (bHUDValid)
+	{
+		int32 Minutes = FMath::FloorToInt(CountDown / 60.f);
+		int32 Seconds = CountDown - Minutes * 60;
+
+		FString CountdownString = FString::Printf(TEXT("%02d:%02d"), Minutes, Seconds);
+		UE_LOG(LogTemp, Warning, TEXT("%d"), Seconds);
+		BlasterHUD->Announcement->WarmupTime->SetText(FText::FromString(CountdownString));
+	}
+}
+
 void ABlasterController::SetHUDTime()
 {
-	int32 SecondsLeft = FMath::CeilToInt(MatchTime - GetServerTime());
+	float CurrentTime = 0.f;
+
+	if (MatchState == MatchState::WaitingToStart)
+	{
+		CurrentTime =
+			WarmupTime - GetServerTime() + LevelStartingTime;
+		UE_LOG(LogTemp, Warning, TEXT("%f"), CurrentTime);
+	}
+	else if (MatchState == MatchState::InProgress)
+	{
+		UE_LOG(LogTemp, Warning, TEXT("SettingMatchCountDownTimer"));
+		CurrentTime =
+			MatchTime + WarmupTime - GetServerTime() + LevelStartingTime;
+	}
+
+	float SecondsLeft = CurrentTime;
 	if (CountdownInt != SecondsLeft)
 	{
-		SetHUDMatchCountdown(MatchTime - GetServerTime());
+		if (MatchState == MatchState::WaitingToStart)
+		{
+			SetHUDAnnouncementCountDown(CurrentTime);
+		}
+		if(MatchState == MatchState::InProgress)
+		{
+			SetHUDMatchCountdown(CurrentTime);
+		}
 	}
 	CountdownInt = SecondsLeft;
+}
+
+void ABlasterController::Server_GetMatchState_Implementation()
+{
+	ABlasterGameMode* BlasterGameMode = Cast<ABlasterGameMode>(UGameplayStatics::GetGameMode(this));
+
+	if (BlasterGameMode)
+	{
+		MatchTime = BlasterGameMode->GModeMatchTime;
+		LevelStartingTime = BlasterGameMode->LevelStartingTime;
+		WarmupTime = BlasterGameMode->WarmupTime;
+		MatchState = BlasterGameMode->GetMatchState();
+
+		Client_JoinMidGame(MatchTime, LevelStartingTime, WarmupTime, MatchState);
+	}
+}
+
+void ABlasterController::Client_JoinMidGame_Implementation(float TotalMatchTime,
+	float TimeWhenLevelStarted, float GWarmupTime, FName CurrentMatchState)
+{
+	BlasterHUD = BlasterHUD == nullptr ? Cast<ABlasterHUD>(GetHUD()) : BlasterHUD;
+
+	MatchTime = TotalMatchTime;
+	LevelStartingTime = TimeWhenLevelStarted;
+	WarmupTime = GWarmupTime;
+	MatchState = CurrentMatchState;
+
+	OnMatchStateSet(MatchState);
+
+	if (BlasterHUD && MatchState == MatchState::WaitingToStart) BlasterHUD->AddAnnouncement();
 }
 
 void ABlasterController::ServerRequestServerTime_Implementation(float TimeOfClientRequest)
