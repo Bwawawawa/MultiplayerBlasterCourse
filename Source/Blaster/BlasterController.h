@@ -34,7 +34,7 @@ public:
 
 	void SetHUDCarriedAmmo(int32 Ammo);
 
-	void SetHUDMatchCountdown(float CountdownTime);
+	void SetHUDMatchCountdown(float CountdownTime, float DeltaTime);
 
 	void SetHUDAnnouncementCountDown(float CountDown);
 
@@ -48,13 +48,13 @@ public:
 protected:
 	virtual void BeginPlay() override;
 
-	void SetHUDTime();
+	void SetHUDTime(float DeltaTime);
 
 	UFUNCTION(Server, Reliable)
 	void Server_GetMatchState();
 
 	UFUNCTION(Client, Reliable)
-	void Client_JoinMidGame(float TotalMatchTime,
+	void Client_JoinMidGame(float TotalMatchTime, float Cooldown,
 		float TimeWhenLevelStarted, float GWarmupTime, FName CurrentMatchState);
 
 	UFUNCTION(Server, Reliable)
@@ -75,15 +75,23 @@ protected:
 	void PollInit();
 
 	void HandleMatchHasStarted();
+
+	void HandleMatchCooldown();
 private:
 	UPROPERTY(EditAnywhere, Category = "Input")
 	TArray<UInputMappingContext*> DefaultMappingContexts;
+
+	UPROPERTY()
+	class ABlasterGameMode* BlasterGameMode;
 
 	UPROPERTY()
 	class ABlasterHUD* BlasterHUD;
 
 	UPROPERTY()
 	float MatchTime = 0.f;
+
+	UPROPERTY()
+	float CoolDownTime = 0.f;
 
 	UPROPERTY()
 	float LevelStartingTime = 0.f;
@@ -109,4 +117,6 @@ private:
 	float HUDScore;
 	int32 HUDDefeats;
 
+	float BlinkCountdown = 10.f;
+	float MaxBlinkCountdown = 10.f;
 };

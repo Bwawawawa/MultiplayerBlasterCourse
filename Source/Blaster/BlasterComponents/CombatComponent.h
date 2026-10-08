@@ -29,6 +29,21 @@ public:
 
 	UFUNCTION(BlueprintCallable)
 	void FinishReloading();
+
+/// <summary>
+/// Firing
+/// </summary>
+
+	void Fire();
+
+	UFUNCTION()
+	void FireActionFunction(bool bPressed);
+
+	UFUNCTION(Server, Reliable)
+	void ServerFire(const FVector_NetQuantize& TraceHitTarget);
+
+	UFUNCTION(NetMulticast, Reliable)
+	void MulticastFire(const FVector_NetQuantize& TraceHitTarget);
 protected:
 	virtual void BeginPlay() override;
 
@@ -40,19 +55,8 @@ protected:
 	UFUNCTION()
 	void OnRep_EquippedWeapon();
 
-	void Fire();
-
-	UFUNCTION()
-	void FireActionFunction(bool bPressed);
-
-	UFUNCTION(Server, Reliable)
-	void ServerFire(const FVector_NetQuantize& TraceHitTarget);
-
 	UFUNCTION(Server,Reliable)
 	void ServerReload();
-
-	UFUNCTION(NetMulticast, Reliable)
-	void MulticastFire(const FVector_NetQuantize& TraceHitTarget);
 
 	void TraceUnderCrosshair(FHitResult& TracehitResult);
 
@@ -138,6 +142,9 @@ private:
 
 	UPROPERTY(EditAnywhere)
 	int32 StartingRocketLauncherAmmo = 30;
+
+	UPROPERTY(EditAnywhere)
+	int32 StartingPistolAmmo = 30;
 
 	TMap<EWeaponType, int32> CarriedAmmoMap;
 

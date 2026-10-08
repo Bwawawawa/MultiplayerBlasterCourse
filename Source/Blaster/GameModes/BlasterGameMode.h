@@ -6,6 +6,11 @@
 #include "GameFramework/GameMode.h"
 #include "BlasterGameMode.generated.h"
 
+namespace MatchState
+{
+	extern BLASTER_API const FName CooldownState;
+}
+
 /**
  * 
  */
@@ -26,10 +31,13 @@ public:
 
 	virtual void Tick(float DeltaTime) override;
 
-	UPROPERTY(EditDefaultsOnly)
+	UPROPERTY(EditDefaultsOnly, Category = "MatchProperties")
 	float WarmupTime = 10.f;
 
-	UPROPERTY(EditAnywhere, Category = "MatchProperties")
+	UPROPERTY(EditDefaultsOnly, Category = "MatchProperties")
+	float CoolDownTime = 10.f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "MatchProperties")
 	float GModeMatchTime = 120.f;
 
 	float LevelStartingTime =0.f;
@@ -40,4 +48,7 @@ protected:
 
 private:
 	float CountdownTime = 0.f;
+
+public:
+	FORCEINLINE float GetCountdownTime() const { return CountdownTime; } 
 };

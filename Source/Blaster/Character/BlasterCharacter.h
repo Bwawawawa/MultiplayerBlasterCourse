@@ -36,8 +36,11 @@ public:
 	UFUNCTION(NetMulticast, Reliable)
 	void MulticastElim();
 
-	
 	void PlayElimMontage();
+
+	UPROPERTY(Replicated)
+	bool bDisableGameplay = false;
+
 protected:
 	virtual void BeginPlay() override;
 	
@@ -137,6 +140,9 @@ protected:
 
 	//poll for any relevant classes and initialize our HUD
 	void PollToInit();
+
+	void RotateInPlace(float DeltaTime);
+
 private:
 	UPROPERTY(VisibleAnywhere)
 	class USpringArmComponent* CameraBoom;
@@ -238,4 +244,6 @@ public:
 	FORCEINLINE float GetHealth() const { return Health; }
 	FORCEINLINE float GetMaxHealth() const { return MaxHealth; }
 	ECombatState GetCombatState() const;
+	FORCEINLINE bool GetDisableGameplay() const { return bDisableGameplay; }
+	FORCEINLINE UCombatComponent* GetCombatComponent() { return Combat; }
 };
